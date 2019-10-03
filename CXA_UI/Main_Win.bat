@@ -1,0 +1,1 @@
+C:\Python27\Scripts\pyside-uic.exe Main_Win.ui -o D:\CxAssetManagementLibrary\CXA_UIPY\Main_Win.py

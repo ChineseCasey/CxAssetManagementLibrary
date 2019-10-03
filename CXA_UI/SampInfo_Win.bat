@@ -1,0 +1,1 @@
+C:\Python27\Scripts\pyside-uic.exe SampInfo_Win.ui -o D:\CxAssetManagementLibrary\CXA_UIPY\SampInfo_Win.py

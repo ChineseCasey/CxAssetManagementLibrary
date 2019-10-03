@@ -1,0 +1,1 @@
+C:\Python27\Scripts\pyside-uic.exe Icon_Widget.ui -o D:\CxAssetManagementLibrary\CXA_UIPY\Icon_Widget.py

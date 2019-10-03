@@ -1,0 +1,1 @@
+C:\Python27\Scripts\pyside-uic.exe Title.ui -o D:\CxAssetManagementLibrary\CXA_UIPY\Title.py
