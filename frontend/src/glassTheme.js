@@ -1,0 +1,153 @@
+import { useMemo } from "react";
+import { theme } from "antd";
+import { createStyles } from "antd-style";
+import clsx from "clsx";
+
+const useStyles = createStyles(({ css, cssVar }) => {
+  const glassBorder = {
+    boxShadow: [
+      `${cssVar.boxShadowSecondary}`,
+      "inset 0 0 5px 2px rgba(255, 255, 255, 0.22)",
+      "inset 0 4px 2px rgba(255, 255, 255, 0.14)",
+    ].join(","),
+  };
+
+  const glassBox = {
+    ...glassBorder,
+    background: `color-mix(in srgb, ${cssVar.colorBgContainer} 18%, transparent)`,
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+  };
+
+  return {
+    glassBorder,
+    glassBox,
+    notBackdropFilter: css({ backdropFilter: "none", WebkitBackdropFilter: "none" }),
+    app: css({ textShadow: "0 1px rgba(0,0,0,0.1)" }),
+    cardRoot: css({
+      ...glassBox,
+      backgroundColor: `color-mix(in srgb, ${cssVar.colorBgContainer} 42%, transparent)`,
+    }),
+    modalContainer: css({
+      ...glassBox,
+      backdropFilter: "none",
+      WebkitBackdropFilter: "none",
+    }),
+    buttonRoot: css({ ...glassBorder }),
+    buttonRootDefaultColor: css({
+      background: "transparent",
+      color: cssVar.colorText,
+      "&:hover": {
+        background: "rgba(255,255,255,0.18)",
+        color: `color-mix(in srgb, ${cssVar.colorText} 90%, transparent)`,
+      },
+      "&:active": {
+        background: "rgba(255,255,255,0.1)",
+        color: `color-mix(in srgb, ${cssVar.colorText} 80%, transparent)`,
+      },
+    }),
+    dropdownRoot: css({
+      ...glassBox,
+      borderRadius: cssVar.borderRadiusLG,
+      ul: { background: "transparent" },
+    }),
+    switchRoot: css({ ...glassBorder, border: "none" }),
+    segmentedRoot: css({
+      ...glassBorder,
+      background: "transparent",
+      backdropFilter: "none",
+      WebkitBackdropFilter: "none",
+      "& .ant-segmented-thumb": { ...glassBox },
+      "& .ant-segmented-item-selected": { ...glassBox },
+    }),
+    radioButtonRoot: css({
+      "&.ant-radio-button-wrapper": {
+        ...glassBorder,
+        background: "transparent",
+        borderColor: "rgba(255, 255, 255, 0.2)",
+        color: cssVar.colorText,
+        "&:hover": {
+          borderColor: "rgba(255, 255, 255, 0.24)",
+          color: cssVar.colorText,
+        },
+        "&.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)": {
+          ...glassBox,
+          borderColor: "rgba(255, 255, 255, 0.28)",
+          color: cssVar.colorText,
+          "&::before": { backgroundColor: "rgba(255, 255, 255, 0.18)" },
+          "&:hover": { color: cssVar.colorText },
+        },
+      },
+    }),
+  };
+});
+
+export default function useGlassTheme(dark = true) {
+  const { styles } = useStyles();
+
+  return useMemo(
+    () =>
+      dark
+        ? {
+            theme: {
+              algorithm: theme.darkAlgorithm,
+              token: {
+                borderRadius: 10,
+                colorPrimary: "#1677ff",
+              },
+            },
+          }
+        : {
+            theme: {
+              algorithm: theme.defaultAlgorithm,
+              token: {
+                borderRadius: 12,
+                borderRadiusLG: 12,
+                borderRadiusSM: 12,
+                borderRadiusXS: 12,
+                motionDurationSlow: "0.2s",
+                motionDurationMid: "0.1s",
+                motionDurationFast: "0.05s",
+                colorPrimary: "#4d8dff",
+              },
+            },
+            app: { className: styles.app },
+            card: { classNames: { root: styles.cardRoot } },
+            modal: { classNames: { container: styles.modalContainer } },
+            button: {
+              classNames: ({ props }) => ({
+                root: clsx(
+                  styles.buttonRoot,
+                  (props.variant !== "solid" || props.color === "default" || props.type === "default") &&
+                    styles.buttonRootDefaultColor
+                ),
+              }),
+            },
+            alert: { className: clsx(styles.glassBox, styles.notBackdropFilter) },
+            dropdown: { classNames: { root: styles.dropdownRoot } },
+            select: {
+              classNames: {
+                root: clsx(styles.glassBox, styles.notBackdropFilter),
+                popup: { root: styles.glassBox },
+              },
+            },
+            datePicker: {
+              classNames: {
+                root: clsx(styles.glassBox, styles.notBackdropFilter),
+                popup: { root: styles.glassBox },
+              },
+            },
+            input: { classNames: { root: clsx(styles.glassBox, styles.notBackdropFilter) } },
+            inputNumber: { classNames: { root: clsx(styles.glassBox, styles.notBackdropFilter) } },
+            popover: { classNames: { root: styles.glassBox } },
+            switch: { classNames: { root: styles.switchRoot } },
+            radio: { classNames: { root: styles.radioButtonRoot } },
+            segmented: { className: styles.segmentedRoot },
+            progress: {
+              classNames: { trail: styles.glassBorder },
+              styles: { trail: { height: 12 }, rail: { height: 12 } },
+            },
+          },
+    [dark, styles]
+  );
+}
