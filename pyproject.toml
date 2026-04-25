@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cxasset-api"
+version = "0.1.0"
+description = "CxAsset Web API baseline"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "alembic>=1.13.2",
+  "fastapi>=0.115.0",
+  "python-multipart>=0.0.20",
+  "pydantic-settings>=2.6.1",
+  "sqlalchemy>=2.0.36",
+  "uvicorn[standard]>=0.32.0",
+]
+
+[project.scripts]
+cxasset-sync = "cxasset_api.sync_cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
