@@ -18,7 +18,7 @@ from sqlalchemy.orm import aliased, selectinload
 
 from cxasset_api.config import settings
 from cxasset_api.db import SessionLocal
-from cxasset_api.models import Asset, FileRef, Library, TreeNode
+from cxasset_api.models import Asset, FileRef, Library, TreeNode, UserFavorite
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 ANTD_WEB_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -124,6 +124,10 @@ class CreateAssetResponse(BaseModel):
     node_id: int
     name: str
     files: list[FileRefItem]
+
+
+class FavoritesListResponse(BaseModel):
+    asset_ids: list[int]
 
 
 def _error_payload(code: str, message: str, request_id: str) -> dict:
@@ -254,7 +258,7 @@ def _get_or_create_node_chain(session, library_id: int, parent_path: str) -> Tre
 
 @app.get("/", include_in_schema=False)
 def home() -> RedirectResponse:
-    return RedirectResponse(url="/antd")
+    return RedirectResponse(url=settings.frontend_url)
 
 
 @app.middleware("http")
@@ -316,6 +320,49 @@ def health() -> dict:
 @app.get("/version")
 def version() -> dict:
     return {"app": settings.app_name, "version": settings.app_version}
+
+
+@app.get("/favorites", response_model=FavoritesListResponse)
+def list_favorites(
+    library_id: int | None = Query(default=None, description="Only return ids for this library, if set"),
+) -> FavoritesListResponse:
+    with SessionLocal() as session:
+        if library_id is None:
+            rows = session.scalars(select(UserFavorite.asset_id).order_by(UserFavorite.asset_id.asc())).all()
+        else:
+            rows = session.scalars(
+                select(UserFavorite.asset_id)
+                .join(Asset, Asset.id == UserFavorite.asset_id)
+                .where(Asset.library_id == library_id)
+                .order_by(UserFavorite.asset_id.asc())
+            ).all()
+    return FavoritesListResponse(asset_ids=[int(x) for x in rows])
+
+
+@app.post("/favorites/{asset_id}", status_code=201)
+def add_favorite(asset_id: int) -> dict:
+    with SessionLocal() as session:
+        asset = session.get(Asset, asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="asset not found")
+        existing = session.scalar(select(UserFavorite).where(UserFavorite.asset_id == asset_id))
+        if existing is not None:
+            return {"ok": True, "asset_id": asset_id, "existed": True}
+        session.add(UserFavorite(asset_id=asset_id))
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+        return {"ok": True, "asset_id": asset_id, "existed": False}
+
+
+@app.delete("/favorites/{asset_id}", status_code=204)
+def remove_favorite(asset_id: int) -> None:
+    with SessionLocal() as session:
+        row = session.scalar(select(UserFavorite).where(UserFavorite.asset_id == asset_id))
+        if row is not None:
+            session.delete(row)
+            session.commit()
 
 
 @app.get("/metrics")

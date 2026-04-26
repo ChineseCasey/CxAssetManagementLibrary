@@ -27,21 +27,12 @@ import useGlassTheme from "./glassTheme";
 
 const { Header, Content } = Layout;
 const { Text } = Typography;
-const FAVORITES_KEY = "cxasset-favorites";
 
 async function api(path, options = {}) {
   const resp = await fetch(path, options);
   if (!resp.ok) throw new Error(`${resp.status} ${path}`);
   const text = await resp.text();
   return text ? JSON.parse(text) : {};
-}
-
-function safeJsonParse(text, fallback) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return fallback;
-  }
 }
 
 function App() {
@@ -72,7 +63,7 @@ function App() {
   const [pendingSelectPath, setPendingSelectPath] = useState(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState(() => new Set(safeJsonParse(localStorage.getItem(FAVORITES_KEY) || "[]", [])));
+  const [favoriteIds, setFavoriteIds] = useState(() => new Set());
 
   const [createModuleName, setCreateModuleName] = useState("");
   const [createTypeModuleId, setCreateTypeModuleId] = useState(null);
@@ -112,7 +103,10 @@ function App() {
     const module = modules.find((m) => m.id === deleteNodeModuleId);
     const moduleNodes = moduleNodeMap[String(deleteNodeModuleId)] || [];
     const all = module ? [module, ...moduleNodes] : moduleNodes;
-    return all.map((n) => ({ label: n.path, value: n.id }));
+    return all.map((n) => ({
+      label: module && n.id === module.id ? `[模块] ${n.name || n.path}` : n.path,
+      value: n.id,
+    }));
   }, [deleteNodeModuleId, modules, moduleNodeMap]);
   const deleteAssetNodePathOptions = useMemo(() => {
     if (!deleteAssetModuleId) return [];
@@ -125,17 +119,33 @@ function App() {
     return list;
   }, [deleteAssetModuleId, modules, moduleNodeMap]);
 
-  useEffect(() => {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favoriteIds)));
-  }, [favoriteIds]);
+  async function loadFavorites(libId = libraryId) {
+    if (!libId) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    const data = await api(`/favorites?library_id=${libId}`);
+    setFavoriteIds(new Set((data.asset_ids || []).map((x) => Number(x))));
+  }
 
-  function toggleFavorite(assetId) {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(assetId)) next.delete(assetId);
-      else next.add(assetId);
-      return next;
-    });
+  async function toggleFavorite(assetId) {
+    const id = Number(assetId);
+    const isFav = favoriteIds.has(id);
+    if (isFav) {
+      await api(`/favorites/${id}`, { method: "DELETE" });
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      await api(`/favorites/${id}`, { method: "POST" });
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    }
   }
 
   function startResize(side, event) {
@@ -266,6 +276,7 @@ function App() {
 
   async function refreshEverything(keepNode = null) {
     if (!libraryId) return;
+    await loadFavorites(libraryId);
     const root = await api(`/libraries/${libraryId}/tree?page=1&page_size=200`);
     const modItems = root.items || [];
     setModules(modItems);
@@ -302,6 +313,7 @@ function App() {
         setModules(rootItems);
         await refreshModuleNodeMap(rootItems, lib.id);
         setAllAssets(await loadAllAssets(lib.id));
+        await loadFavorites(lib.id);
         if (root.items?.[0]) {
           setActiveModuleId(root.items[0].id);
           setCreateTypeModuleId(root.items[0].id);
@@ -493,9 +505,12 @@ function App() {
   }
 
   async function handleDeleteNode() {
-    if (!deleteNodeId) return;
-    await api(`/manage/nodes/${deleteNodeId}`, { method: "DELETE" });
+    const targetId = Number(deleteNodeId || deleteNodeModuleId || 0);
+    if (!targetId) return;
+    await api(`/manage/nodes/${targetId}`, { method: "DELETE" });
     setDeleteNodeId(null);
+    setDeleteAssetId(null);
+    setDeleteAssetNodePath("");
     await refreshEverything(null);
     msgApi.success("目录删除成功");
   }
@@ -622,7 +637,7 @@ function App() {
                           icon={favoriteIds.has(a.id) ? <StarFilled /> : <StarOutlined />}
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleFavorite(a.id);
+                            toggleFavorite(a.id).catch(() => msgApi.error("收藏更新失败"));
                           }}
                         />
                         <div className="thumb-wrap" style={{ height: `${cardThumbSize}px` }}>
@@ -675,7 +690,7 @@ function App() {
                           icon={favoriteIds.has(a.id) ? <StarFilled /> : <StarOutlined />}
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleFavorite(a.id);
+                            toggleFavorite(a.id).catch(() => msgApi.error("收藏更新失败"));
                           }}
                         />
                       </div>
