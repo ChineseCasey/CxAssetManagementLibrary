@@ -1,0 +1,6 @@
+PySide6>=6.8.0
+requests>=2.32.0
+singledispatch>=4.1.2
+dayu-path>=0.5.3
+# dayu_widgets repo lacks package metadata; clone as source (README section).
+

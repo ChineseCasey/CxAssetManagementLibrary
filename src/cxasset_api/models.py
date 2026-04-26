@@ -57,6 +57,19 @@ class TreeNode(TimestampMixin, Base):
     assets: Mapped[list["Asset"]] = relationship(back_populates="node")
 
 
+class UserFavorite(TimestampMixin, Base):
+    """Single-user favorites; stored in API DB (desktop and future clients)."""
+
+    __tablename__ = "user_favorites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    asset_id: Mapped[int] = mapped_column(
+        ForeignKey("assets.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+
+    asset: Mapped["Asset"] = relationship()
+
+
 class Asset(TimestampMixin, Base):
     __tablename__ = "assets"
     __table_args__ = (
